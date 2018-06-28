@@ -1,0 +1,5 @@
+[book]
+authors = ["Zach Shipko"]
+multilingual = false
+src = "src"
+title = "Irmin Tutorial"

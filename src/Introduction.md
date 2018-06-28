@@ -1,8 +1,10 @@
-# Irmin Basics
+# Irmin Introduction
 
-`irmin` is a datastore based on the same principles as git, providing the ability to perform various operations on stores like branching, merging and reverting. It is typically embedded into an application, rather than acting as a standalone database system, but there are also tools to inspect and modify existing databases using the command line. In this introduction I will explain how to get started using both the library and the command-line tool.
+## What is Irmin?
 
-## Getting set up
+`irmin` is a datastore based on the same principles as git. It provides the ability to perform various operations on stores like branching, merging and reverting and is typically embedded into an application, rather than acting as a standalone database system. In this introduction I will explain how to get started using both the library and the command-line tool.
+
+## Getting started
 
 1. Before you can create an `irmin` database you need to consider what type of data you will be storing. By default, Irmin provides implementations for `string`, `cstruct`, and `json` content types, but it's also possible to create your own with the [Irmin.Type](https://mirage.github.io/irmin/irmin/Irmin/Type/index.html) combinator.
 
@@ -54,22 +56,34 @@ let branch config name =
     Mem_store.of_branch repo name
 ```
 
-### Modifying the store
+## Modifying the store
 
 ```ocaml
 let info = Irmin_unix.info ~author:"Example"
 
 let main =
 Mem_store.Repo.v config >>= Mem_store.master >>= fun t ->
+
+(* Set a/b/c to "Hello, Irmin!" *)
 Mem_store.set t ["a"; "b"; "c"] "Hello, Irmin!" ~info:(info "my first commit!") >>= fun () ->
+
+(* Get a/b/c *)
 Mem_store.get t ["a"; "b"; "c"] >|= fun s ->
 assert (s = "Hello, Irmin!")
 
 let _ = Lwt_main.run main
 ```
 
+## Command-line
 
+The command-line application, `irmin`, can be used to manage `irmin` stores from the command line. For example, the operations described above can be performed on a filesystem-backed Git store using the following commands:
 
+```shell
+$ mkdir mystore/
 
+$ irmin set a/b/c "Hello, Irmin!" --message "my first commit!" --author Example
+$ irmin get a/b/c
+Hello, Irmin!
+```
 
-
+Since we're using the Git layout in this example, it is possible to inspect the store on disk using `git`!

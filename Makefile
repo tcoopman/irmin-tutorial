@@ -1,4 +1,4 @@
-SRC=Introduction.md
+SRC=src/Introduction.md
 
 check:
 	bin/markdown-check-ocaml $(SRC) -l irmin-unix --vim
