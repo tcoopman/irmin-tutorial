@@ -1,5 +1,5 @@
 # Summary
 
 - [Introduction](Introduction.md)
-- [Custom contents](Contents.md)
+- [Custom content types](Contents.md)
 - [Writing a storage backend](Backend.md)

@@ -1,4 +1,4 @@
-# Irmin Introduction
+# Introduction
 
 ## What is Irmin?
 
@@ -58,6 +58,8 @@ let branch config name =
 
 ## Modifying the store
 
+Now we're able to put it all together and begin reading and writing contents. As shown below, once we have our repo set up we can use the `get` and `set` functions to read and modify the store.
+
 ```ocaml
 let info = Irmin_unix.info ~author:"Example"
 
@@ -65,7 +67,8 @@ let main =
 Mem_store.Repo.v config >>= Mem_store.master >>= fun t ->
 
 (* Set a/b/c to "Hello, Irmin!" *)
-Mem_store.set t ["a"; "b"; "c"] "Hello, Irmin!" ~info:(info "my first commit!") >>= fun () ->
+let message = "my first commit" in
+Mem_store.set t ["a"; "b"; "c"] "Hello, Irmin!" ~info:(info message) >>= fun () ->
 
 (* Get a/b/c *)
 Mem_store.get t ["a"; "b"; "c"] >|= fun s ->
@@ -80,10 +83,9 @@ The command-line application, `irmin`, can be used to manage `irmin` stores from
 
 ```shell
 $ mkdir mystore/
-
 $ irmin set a/b/c "Hello, Irmin!" --message "my first commit!" --author Example
 $ irmin get a/b/c
 Hello, Irmin!
 ```
 
-Since we're using the Git layout in this example, it is possible to inspect the store on disk using `git`!
+Since we're using the Git layout in this example it is possible to inspect the store using `git`! That means commands like `git log` and `git show` will work as expected.
