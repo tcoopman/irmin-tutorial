@@ -68,7 +68,7 @@ Mem_store.Repo.v config >>= Mem_store.master >>= fun t ->
 
 (* Set a/b/c to "Hello, Irmin!" *)
 let message = "my first commit" in
-Mem_store.set t ["a"; "b"; "c"] "Hello, Irmin!" ~info:(info message) >>= fun () ->
+Mem_store.set t ["a"; "b"; "c"] "Hello, Irmin!" ~info:(info "%s" message) >>= fun () ->
 
 (* Get a/b/c *)
 Mem_store.get t ["a"; "b"; "c"] >|= fun s ->

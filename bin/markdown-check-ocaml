@@ -20,7 +20,7 @@ for file in args.files:
     with open(file, 'r') as f:
         code.append("(** FILE: {} *)\n".format(file))
         s = f.read()
-        search = re.findall('```ocaml([^`]*)```', s)
+        search = re.findall('```ocaml(.*?)```', s, flags=re.DOTALL)
         code += search
 
 dir = tempfile.mkdtemp(prefix="markdown-check-ocaml-")
