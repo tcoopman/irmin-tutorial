@@ -19,7 +19,7 @@ The built-in content types can be found in [Irmin.Contents](https://mirage.githu
 module Mem_store = Irmin_mem.KV(Irmin.Contents.String)
 
 (** An on-disk git store with string contents *)
-module Git_store = Irmin_unix.Git.KV(Irmin_unix.Git.G)(Irmin.Contents.String)
+module Git_store = Irmin_unix.Git.FS.KV(Irmin.Contents.String)
 ```
 
 In this case we're using a `KV` store which is a subtype of [Irmin.S](https://mirage.github.io/irmin/irmin/Irmin/module-type-S/index.html) whit string list keys, string branches and no metadata.
@@ -61,14 +61,13 @@ let branch config name =
 Now we're able to put it all together and begin reading and writing contents. As shown below, once we have our repo set up we can use the `get` and `set` functions to read and modify the store.
 
 ```ocaml
-let info = Irmin_unix.info ~author:"Example"
+let info message = Irmin_unix.info ~author:"Example" "%s"
 
 let main =
 Mem_store.Repo.v config >>= Mem_store.master >>= fun t ->
 
 (* Set a/b/c to "Hello, Irmin!" *)
-let message = "my first commit" in
-Mem_store.set t ["a"; "b"; "c"] "Hello, Irmin!" ~info:(info "%s" message) >>= fun () ->
+Mem_store.set t ["a"; "b"; "c"] "Hello, Irmin!" ~info:(info "my first commit") >>= fun () ->
 
 (* Get a/b/c *)
 Mem_store.get t ["a"; "b"; "c"] >|= fun s ->

@@ -36,8 +36,13 @@ Finally, we need to define a merge function. For our counter type we can just ad
 ```ocaml
 	let merge ~old a b =
 		Lwt.return (Ok (Int64.add a b))
+```
 
+```ocaml
     let merge = Irmin.Merge.(option (v t merge))
+```
+
+```ocaml
 end
 ```
 
@@ -91,6 +96,9 @@ And `Irmin.Type.decode_json` to decode the JSON encoded string.
         | None -> merge_object [] a b
 
     let merge = Irmin.Merge.(option (v t merge))
+```
+
+```ocaml
 end
 ```
 
