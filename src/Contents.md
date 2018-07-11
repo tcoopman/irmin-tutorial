@@ -1,6 +1,6 @@
 # Custom content types
 
-At some point working with `Irmin` you will probably want to move beyond using string values. This section will explain how custom datatypes can be implemented using the `Irmin.Type` combinator. Before continuing with these examples make sure to read through the [official documentation](https://docs.mirage.io/irmin/Irmin/Type/index.html), which does a good job of outlining what types are defined and how theyre used.
+At some point working with `Irmin` you will probably want to move beyond using the default content types. This section will explain how custom datatypes can be implemented using the `Irmin.Type` combinator. Before continuing with these examples make sure to read through the [official documentation](https://docs.mirage.io/irmin/Irmin/Type/index.html), which does a good job of outlining what types are defined and an overview of how theyre used.
 
 Now let's create a custom type and define the functions required by [Irmin.Contents.S](https://docs.mirage.io/irmin/Irmin/Contents/module-type-S/index.html) using a simple datatype and then another more complex example after.
 
@@ -12,7 +12,7 @@ module Counter: Irmin.Contents.S with type t = int64 = struct
 	let t = Irmin.Type.int64
 ```
 
-A counter is just a simple `int64` value that can be incremented and decremented. Luckilly Irmin already defines and `int64` type so we don't have to define our own.
+A counter is just a simple `int64` value that can be incremented and decremented. Luckily Irmin already defines and `int64` type so we don't have to define our own.
 
 Next we will need to define some functions for converting to and from strings.
 
@@ -29,9 +29,9 @@ Next we will need to define some functions for converting to and from strings.
 		| None -> Error (`Msg "invalid counter value")
 ```
 
-And `of_string` is used to convert a formatted string back to our original type. It returns `(t, [\`Msg of string]) result`, which allows for an error message to be passed back to the user if the string is invalid.
+And `of_string` is used to convert a formatted string back to our original type. It returns ```(t, [`Msg of string]) result```, which allows for an error message to be passed back to the user if the string is invalid.
 
-Finally, we need to define a merge function. For our counter type we can just add the values when merging, this is a much simplier situation than you will encounter but was picked to illustrate a very simple case.
+Finally, we need to define a merge function. For our counter type we can just add the values when merging, this is a much simplier situation than you will encounter but was picked to illustrate a very simple case. Typically when writing a merge function you will need to deal with how to handle conflicts, this will be covered in the example after this one.
 
 ```ocaml
 	let merge ~old a b =
@@ -79,7 +79,9 @@ Now we're using `Irmin.Type.pp_json`, the predefined JSON pretty-printer, rather
 And `Irmin.Type.decode_json` to decode the JSON encoded string.
 
 ```ocaml
-    let merge_object old b c = Irmin.Merge.conflict "TODO: define three-way merge for objects"
+    let merge_object old a b =
+    	let open Irmin.Merge.Infix in
+        Irmin.Merge.conflict "not implemented"
 ```
 
 `merge_object` is a 3-way merge function for our object type. It ensures that a key will not be overwritten by a merge, but allows new keys to be added.
@@ -94,13 +96,9 @@ And `Irmin.Type.decode_json` to decode the JSON encoded string.
             else if equal old b then Irmin.Merge.ok a
             else merge_object old a b
         | None -> merge_object [] a b
-
+    (* Define the merge operation using our merge function *)
     let merge = Irmin.Merge.(option (v t merge))
-```
-
-```ocaml
 end
 ```
 
-
-
+In the [next section](/Backend) I will cover how to write your own storage backend using [irmin-redis](https://github.com/zshipko/irmin-redis) as an example.
