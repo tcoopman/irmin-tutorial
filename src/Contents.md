@@ -78,10 +78,13 @@ Now we're using `Irmin.Type.pp_json`, the predefined JSON pretty-printer, rather
 
 And `Irmin.Type.decode_json` to decode the JSON encoded string.
 
+Then we can leverage `Irmin.Merge.alist` to define a merge function for associative lists. In this case we are using strings for both the keys and values, however `alist` requires you to have written merge functions for both the key and value types so it can get quite complicated depending on your needs. For a slightly more complicated example you can look at `merge_object` and `merge_value` in [contents.ml](https://github.com/mirage/irmin/blob/master/src/irmin/contents.ml), which implements JSON contents for Irmin.
+
 ```ocaml
-    let merge_object old a b =
-    	let open Irmin.Merge.Infix in
-        Irmin.Merge.conflict "not implemented"
+    let merge_object ~old x y =
+        let open Irmin.Merge.Infix in
+        let m = Irmin.Merge.(alist Irmin.Type.string Irmin.Type.string (fun _key -> option string)) in
+        Irmin.Merge.(f m ~old x y) >>=* fun x' -> Irmin.Merge.ok x'
 ```
 
 `merge_object` is a 3-way merge function for our object type. It ensures that a key will not be overwritten by a merge, but allows new keys to be added.
@@ -94,11 +97,13 @@ And `Irmin.Type.decode_json` to decode the JSON encoded string.
         | Some old ->
             if equal old a then Irmin.Merge.ok b
             else if equal old b then Irmin.Merge.ok a
-            else merge_object old a b
-        | None -> merge_object [] a b
+            else merge_object (fun () -> Irmin.Merge.ok (Some old)) a b
+        | None -> merge_object (fun () -> Irmin.Merge.ok None) a b
     (* Define the merge operation using our merge function *)
     let merge = Irmin.Merge.(option (v t merge))
 end
 ```
 
-In the [next section](/Backend) I will cover how to write your own storage backend using [irmin-redis](https://github.com/zshipko/irmin-redis) as an example.
+Now you should be ready to follow along with the [custom_merge](https://github.com/mirage/irmin/blob/master/examples/custom_merge.ml) example in the Irmin repository.
+
+In the [next section](/Backend) I will cover how to write your own storage backend.
