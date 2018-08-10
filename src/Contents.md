@@ -1,6 +1,6 @@
 # Custom content types
 
-At some point working with `Irmin` you will probably want to move beyond using the default content types. This section will explain how custom datatypes can be implemented using the `Irmin.Type` combinator. Before continuing with these examples make sure to read through the [official documentation](https://docs.mirage.io/irmin/Irmin/Type/index.html), which does a good job of outlining what types are defined and an overview of how theyre used.
+At some point working with `Irmin` you will probably want to move beyond using the default content types. This section will explain how custom datatypes can be implemented using [Irmin.Type](https://mirage.github.io/irmin/irmin/Irmin/Type/index.html). Before continuing with these examples make sure to read through the [official documentation](https://docs.mirage.io/irmin/Irmin/Type/index.html), which does a good job of outlining what types are defined and an overview of how theyre used.
 
 Now let's create a custom type and define the functions required by [Irmin.Contents.S](https://docs.mirage.io/irmin/Irmin/Contents/module-type-S/index.html) using a simple datatype and then another more complex example after.
 
@@ -52,9 +52,80 @@ Now this `Counter` module can be used as the contents of an Irmin store:
 module Counter_mem_store = Irmin_mem.KV(Counter)
 ```
 
+## Record
+
+Now let's wrap a record type so it can be stored directly in Irmin.
+
+Here is a `car` type that we will use as content type for our store. The key type will be VIN numbers, so maybe this is a list of clients for an automotive repair shop.
+
+```ocaml
+type color =
+    | Black
+    | White
+    | Other of string
+and car = {
+    license: string;
+    year: int32;
+    make_and_model: string * string;
+    color: color;
+}
+```
+
+Now let's turn it into a representation that Irmin will understand! First color has to be wrapped, variants are modeled using the `variant` function:
+
+```ocaml
+module Car: Irmin.Contents.S with type t = car = struct
+    type t  = car
+    let color =
+        let open Irmin.Type in
+        variant "color" (fun black white other -> function
+            | Black -> black
+            | White -> white
+            | Other color -> other color)
+        |~ case0 "Black" Black
+        |~ case0 "White" White
+        |~ case1 "Other" string (fun s -> Other s)
+        |> sealv
+```
+
+This is mapping variant cases to their names in string representation. Records are handled similarly:
+
+```ocaml
+    let car =
+        let open Irmin.Type in
+        record "car" (fun license year make_and_model color ->
+            {license; year; make_and_model; color})
+        |+ field "license" string (fun t -> t.license)
+        |+ field "year" int32 (fun t -> t.year)
+        |+ field "make_and_model" (pair string string) (fun t -> t.make_and_model)
+        |+ field "color" color (fun t -> t.color)
+        |> sealr
+```
+
+Finally, we can use the builtin JSON encoding and merge function:
+
+```ocaml
+	let pp = Irmin.Type.pp_json car
+```
+
+This example uses `Irmin.Type.pp_json`, the predefined JSON pretty-printer, rather than writing our own. As types get more and more complex it is very nice to be able to use the JSON formatter to avoid having to write custom functions for encoding and decoding values.
+
+```ocaml
+    let of_string s =
+        let decoder = Jsonm.decoder (`String s) in
+        Irmin.Type.decode_json car decoder
+```
+
+And the merge operation:
+
+```ocaml
+    let merge = Irmin.Merge.(option (idempotent car))
+end
+```
+
 ## Object
 
-In this example we will define an object type that maps string keys to string values. The type itself is not much more complicated, but the merge function will be much more involved.
+In this example we will define an object type that maps string keys to string values. The type itself is not very complicated, but the merge function is.
 
 ```ocaml
 module Object = struct
@@ -62,13 +133,15 @@ module Object = struct
     let t = Irmin.Type.(list (pair string string))
 ```
 
-So far so good, Irmin provides a simple way to model a list of pairs!
+So far so good, Irmin provides a simple way to model a list of pairs! Now we can use the JSON encoder again, just like in the previous example.
+
+Define `pp`:
 
 ```ocaml
 	let pp = Irmin.Type.pp_json t
 ```
 
-Now we're using `Irmin.Type.pp_json`, the predefined JSON pretty-printer, rather than writing our own. As types get more and more complex it is very nice to be able to use the JSON formatter to avoid having to write custom functions for encoding and decoding values.
+And `of_string`:
 
 ```ocaml
     let of_string s =
@@ -76,9 +149,7 @@ Now we're using `Irmin.Type.pp_json`, the predefined JSON pretty-printer, rather
         Irmin.Type.decode_json t decoder
 ```
 
-And `Irmin.Type.decode_json` to decode the JSON encoded string.
-
-Then we can leverage `Irmin.Merge.alist` to define a merge function for associative lists. In this case we are using strings for both the keys and values, however `alist` requires you to have written merge functions for both the key and value types so it can get quite complicated depending on your needs. For a slightly more complicated example you can look at `merge_object` and `merge_value` in [contents.ml](https://github.com/mirage/irmin/blob/master/src/irmin/contents.ml), which implements JSON contents for Irmin.
+Then we can leverage `Irmin.Merge.alist` to define a merge function for associative lists. In this case we are using strings for both the keys and values, however `alist` requires you to have written merge functions for both the key and value types so it can get quite complicated depending on your types. For a slightly more complicated example you can look at `merge_object` and `merge_value` in [contents.ml](https://github.com/mirage/irmin/blob/master/src/irmin/contents.ml), which implements JSON contents for Irmin.
 
 ```ocaml
     let merge_object ~old x y =
@@ -105,5 +176,3 @@ end
 ```
 
 Now you should be ready to follow along with the [custom_merge](https://github.com/mirage/irmin/blob/master/examples/custom_merge.ml) example in the Irmin repository.
-
-In the [next section](/Backend) I will cover how to write your own storage backend.

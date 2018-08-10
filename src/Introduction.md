@@ -59,10 +59,9 @@ An in-memory store with string contents:
 module Mem_store = Irmin_mem.KV(Irmin.Contents.String)
 ```
 
-
 An on-disk git store with json contents:
 
-```
+```ocaml
 module Git_store = Irmin_unix.Git.FS.KV(Irmin.Contents.Json)
 ```
 
@@ -126,12 +125,10 @@ assert (s = "Hello, Irmin!")
 let _ = Lwt_main.run main
 ```
 
-## Advanced topics
+## In-depth
 
 ### Transactions
 ### Trees
 ### Commits
 ### History
-
-In [the next section](/Contents) I will go into more detail about how to build custom content types.
 
