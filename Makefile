@@ -1,4 +1,4 @@
-MDX_PATH=~/devel/mdx/_build/install/default/bin/mdx
+MDX_PATH=mdx
 
 check:
 	$(MDX_PATH) pp src/Introduction.md > src/book.ml
