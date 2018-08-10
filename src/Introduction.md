@@ -12,15 +12,19 @@ These examples require the `irmin-unix` package to be installed from [opam](http
 $ opam install irmin-unix
 ```
 
-That will install a command line tool called `irmin`!
+After that is finished you should have the `irmin` binary installed! To get a list of commands run:
 
-Once `irmin` is installed you can used it to create a new datastore and serve it over HTTP:
+```shell
+$ irmin help
+```
+
+Now you can do things like create an in-memory store and serve it over HTTP:
 
 ```shell
 $ irmin --daemon --store mem --address http://127.0.0.1:8888
 ```
 
-Or create a new store on-disk and manipulate it directly:
+Or create a new store on-disk and manipulate it directly from the terminal:
 
 ```shell
 $ export EXAMPLE=/tmp/irmin/example
@@ -43,22 +47,26 @@ See the output of `irmin help irmin.yml` for more details.
 
 ## Getting started using OCaml
 
-Irmin has the ability to adapt to existing data structures using a convenient type combinator ([Irmin.Type](https://mirage.github.io/irmin/irmin/Irmin/Type/index.html)) to define ([Contents](https://mirage.github.io/irmin/irmin/Irmin/Contents/index.html)). Almost everything in `Irmin` is configurable including the hash function, branch, key and metadata types. Because of this there are a lot of different options to pick from; I will do my best to explain the most basic usage and work up from there.
+Irmin has the ability to adapt to existing data structures using a convenient type combinator ([Irmin.Type](https://mirage.github.io/irmin/irmin/Irmin/Type/index.html)), which is used to define ([Contents](https://mirage.github.io/irmin/irmin/Irmin/Contents/index.html)). Additionally, you have a choice of storage backends. By default, Irmin provides a few options: an in-memory store, a filesystem store, a git-compatible in-memory store and a git-compatible filesystem store. Of course, it's also possible to implement your own storage backend. Nearly everything in `Irmin` is configurable including the hash function, branch, key and metadata types. Because of this there are a lot of different options to pick from; I will do my best to explain the most basic usage and work up from there.
 
-In addition to the content type, you will also need to pick a storage backend. By default, Irmin provides a few options: an in-memory store, a filesystem store, a git-compatible in-memory store and a git-compatible filesystem store. Of course, it's also possible to implement your own storage backend.
+The default `Contents` are available under [Irmin.Contents](https://mirage.github.io/irmin/irmin/Irmin/Contents/index.html), but the storage backends are all implemented as separate modules. The core backends are on opam as `irmin-mem`, `irmin-fs` and `irmin-git`. These packages define the way that the data should be organized, but not any I/O routines. Luckily, `irmin-unix` implements the I/O routines needed to make Irmin work on unix-like platforms and `irmin-mirage` provides the same for unikernels built using [Mirage](https://mirage.io).
 
-Storage backends are all implemented as separate modules, the default backends are on opam as `irmin-mem`, `irmin-fs` and `irmin-git`. These packages define the way that the data should be organized, but not any I/O routines. Luckily, `irmin-unix` implements the I/O routines needed to make Irmin work on unix-like platforms and `irmin-mirage` provides the same for unikernels built using [Mirage](https://mirage.io).
+Let's create a couple different stores...
 
-Let's create a couple different stores:
+An in-memory store with string contents:
 
 ```ocaml
-(** An in-memory store with string contents *)
 module Mem_store = Irmin_mem.KV(Irmin.Contents.String)
-(** An on-disk git store with json contents *)
+```
+
+
+An on-disk git store with json contents:
+
+```
 module Git_store = Irmin_unix.Git.FS.KV(Irmin.Contents.Json)
 ```
 
-In this case I am using an [Irmin.KV]( https://mirage.github.io/irmin/irmin/Irmin/module-type-KV/index.html) store which is a specialization of [Irmin.S](https://mirage.github.io/irmin/irmin/Irmin/module-type-S/index.html) with string list keys, string branches and no metadata.
+In these examples I am using an [Irmin.KV]( https://mirage.github.io/irmin/irmin/Irmin/module-type-KV/index.html) store which is a specialization of [Irmin.S](https://mirage.github.io/irmin/irmin/Irmin/module-type-S/index.html) with string list keys, string branches and no metadata.
 
 Before calling any functions, it is important to remember that most `Irmin` functions return `Lwt.t` values, which means that you will need to use `Lwt_main.run` to execute them. If you're not familiar with [Lwt](https://github.com/ocsigen/lwt) then I suggest [this tutorial](https://mirage.io/wiki/tutorial-lwt).
 
@@ -118,8 +126,9 @@ assert (s = "Hello, Irmin!")
 let _ = Lwt_main.run main
 ```
 
-## Inspecting the store
+## Advanced topics
 
+### Transactions
 ### Trees
 ### Commits
 ### History
