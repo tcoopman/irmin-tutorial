@@ -91,7 +91,7 @@ module Car: Irmin.Contents.S with type t = car = struct
 This is mapping variant cases to their names in string representation. Records are handled similarly:
 
 ```ocaml
-    let car =
+    let t =
         let open Irmin.Type in
         record "car" (fun license year make_and_model color ->
             {license; year; make_and_model; color})
@@ -105,7 +105,7 @@ This is mapping variant cases to their names in string representation. Records a
 Finally, we can use the builtin JSON encoding and merge function:
 
 ```ocaml
-	let pp = Irmin.Type.pp_json car
+	let pp = Irmin.Type.pp_json t
 ```
 
 This example uses `Irmin.Type.pp_json`, the predefined JSON pretty-printer, rather than writing our own. As types get more and more complex it is very nice to be able to use the JSON formatter to avoid having to write custom functions for encoding and decoding values.
@@ -113,13 +113,13 @@ This example uses `Irmin.Type.pp_json`, the predefined JSON pretty-printer, rath
 ```ocaml
     let of_string s =
         let decoder = Jsonm.decoder (`String s) in
-        Irmin.Type.decode_json car decoder
+        Irmin.Type.decode_json t decoder
 ```
 
 And the merge operation:
 
 ```ocaml
-    let merge = Irmin.Merge.(option (idempotent car))
+    let merge = Irmin.Merge.(option (idempotent t))
 end
 ```
 
