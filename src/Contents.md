@@ -71,7 +71,7 @@ and car = {
 }
 ```
 
-Now let's turn it into a representation that Irmin will understand! First color has to be wrapped, variants are modeled using the `variant` function:
+Let's turn it into a representation that Irmin will understand! First color has to be wrapped, variants are modeled using the `variant` function:
 
 ```ocaml
 module Car: Irmin.Contents.S with type t = car = struct
@@ -121,6 +121,40 @@ And the merge operation:
 ```ocaml
     let merge = Irmin.Merge.(option (idempotent t))
 end
+```
+
+Now some examples using `Car`:
+
+```ocaml
+module Car_store = Irmin_mem.KV(Car)
+
+let car_a = {
+    color = Other "green";
+    license = "ABCD123";
+    year = 2002;
+    make_and_model = ("Honda", "Accord");
+}
+
+let car_b = {
+    color = Black;
+    license = "MYCAR00";
+    year = "2016";
+    make_and_model = ("Toyota", "Corolla");
+}
+
+let add_car store vin car =
+    Car_store.set store [vin] car
+
+let main =
+    let config = Irmin_mem.config () in
+    Car_store.Repo.v config >>= Car_store.master >>= fun t ->
+    add_car t "5Y2SR67049Z456146" car_a >>= fun () ->
+    add_car t "2FAFP71W65X110910" car_b >>= fun () ->
+    Car_store.get t "2FAFP71W65X110910" >|= fun car ->
+    assert (car.license = car_a.license);
+    assert (car.year = car_a.year)
+
+let () = Lwt.run main
 ```
 
 ## Object

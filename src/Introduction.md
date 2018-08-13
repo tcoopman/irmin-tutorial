@@ -125,10 +125,23 @@ assert (s = "Hello, Irmin!")
 let _ = Lwt_main.run main
 ```
 
-## In-depth
+## Transactions
 
-### Transactions
-### Trees
-### Commits
-### History
+Transactions allow you to make many modifications to an Irmin store, using in in-memory tree, and apply them all at once. This is done using the `Store.with_tree` function:
+
+```ocaml
+let transaction_example =
+Mem_store.Repo.v config >>= Mem_store.master >>= fun t ->
+let info = Irmin_unix.info "example transaction" in
+Mem_store.with_tree t [] ~info (fun tree ->
+    let tree = match tree with Some t -> t | None -> Mem_store.Tree.empty in
+    Mem_store.Tree.remove tree ["foo"; "bar"] >>= fun tree ->
+    Mem_store.Tree.add tree ["a"; "b"; "c"] "123" >>= fun tree ->
+    Mem_store.Tree.add tree ["d"; "e"; "f"] "456" >>= Lwt.return_some)
+
+let _ = Lwt_main.run transaction_example
+```
+
+See [Irmin.S.Tree](https://mirage.github.io/irmin/irmin/Irmin/module-type-S/Tree/index.html) for more information about operations that can be performed on trees.
+
 
