@@ -142,6 +142,18 @@ Mem_store.with_tree t [] ~info (fun tree ->
 let _ = Lwt_main.run transaction_example
 ```
 
+Here is an example `move` function to move files from one prefix to another:
+
+```ocaml
+let move t ~src ~dest =
+    Mem_store.with_tree t Mem_store.Key.empty (fun tree ->
+        match tree with
+        | Some tr ->
+            Mem_store.Tree.get_tree tr src >>= fun v ->
+            Mem_store.Tree.remove tr src >>= fun _ ->
+            Mem_store.Tree.add_tree tr dest v >>= Lwt.return_some
+        | None -> Lwt.return_none
+    )
+```
+
 See [Irmin.S.Tree](https://mirage.github.io/irmin/irmin/Irmin/module-type-S/Tree/index.html) for more information about operations that can be performed on trees.
-
-

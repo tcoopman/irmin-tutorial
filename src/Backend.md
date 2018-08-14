@@ -2,7 +2,7 @@
 
 In this section I will explain how to write a custom storage backend for `Irmin` using a simplified implementation of [irmin-redis](https://github.com/zshipko/irmin-redis) as an example. `irmin-redis` uses a Redis server to store Irmin data.
 
-Unlike [custom datatypes](/Contents), there is not a tidy way of doing this. Each backend must fufil certain critera as defined by [Irmin.AO_MAKER](https://mirage.github.io/irmin/irmin/Irmin/module-type-AO_MAKER/index.html), [Irmin.LINK_MAKER](https://mirage.github.io/irmin/irmin/Irmin/module-type-LINK_MAKER/index.html), [Irmin.RW_MAKER](https://mirage.github.io/irmin/irmin/Irmin/module-type-RW_MAKER/index.html), [Irmin.S_MAKER](https://mirage.github.io/irmin/irmin/Irmin/module-type-S_MAKER/index.html), and [Irmin.KV_MAKER](https://mirage.github.io/irmin/irmin/Irmin/module-type-KV_MAKER/index.html). These module types define interfaces for functors that create stores. For example, a `KV_MAKER` defines a module that takes an `Irmin.Contents.S` as a parameter and returns a module of type `Irmin.KV`.
+Unlike [custom datatypes](/Contents), there is not a tidy way of doing this. Each backend must fulfil certain critera as defined by [Irmin.AO_MAKER](https://mirage.github.io/irmin/irmin/Irmin/module-type-AO_MAKER/index.html), [Irmin.LINK_MAKER](https://mirage.github.io/irmin/irmin/Irmin/module-type-LINK_MAKER/index.html), [Irmin.RW_MAKER](https://mirage.github.io/irmin/irmin/Irmin/module-type-RW_MAKER/index.html), [Irmin.S_MAKER](https://mirage.github.io/irmin/irmin/Irmin/module-type-S_MAKER/index.html), and [Irmin.KV_MAKER](https://mirage.github.io/irmin/irmin/Irmin/module-type-KV_MAKER/index.html). These module types define interfaces for functors that create stores. For example, a `KV_MAKER` defines a module that takes an `Irmin.Contents.S` as a parameter and returns a module of type `Irmin.KV`.
 
 ## Redis client
 
@@ -47,6 +47,8 @@ end
 
 ### The append-only store
 
+Next, define the append-only (`AO`) interface:
+
 ```ocaml
 module AO (K: Irmin.Hash.S) (V: Irmin.Contents.Conv) = struct
   include RO(K)(V)
@@ -74,3 +76,52 @@ end
 
 ## The read-write store
 
+```ocaml
+module RW (K: Irmin.Contents.Conv) (V: Irmin.Contents.Conv) = struct
+  module RO = RO(K)(V)
+  module W = Irmin.Private.Watch.Make(K)(V)
+  type t = { t: RO.t; w: W.t }
+  type key = RO.key
+  type value = RO.value
+  type watch = W.watch
+  let watches = W.v ()
+  let find t = RO.find t.t
+  let mem t  = RO.mem t.t
+  let watch_key t key = Fmt.pr "%a\n%!" K.pp key; W.watch_key t.w key
+  let watch t = W.watch t.w
+  let unwatch t = W.unwatch t.w
+  let list {t = client; _} =
+      match Client.run client [| "KEYS"; "*" |] with
+      | Array arr ->
+          Array.map (fun k ->
+            K.of_string (Value.to_string k)
+          ) arr
+          |> Array.to_list
+          |> Lwt_list.filter_map_s (function
+            | Ok s -> Lwt.return_some s
+            | _ -> Lwt.return_none)
+      | _ -> Lwt.return []
+  let set {t = client; w} key value =
+      let key' = Fmt.to_to_string K.pp key in
+      let value' = Fmt.to_to_string V.pp value in
+      match Client.run client [| "SET"; key'; value' |] with
+      | Status "OK" -> W.notify w key (Some value)
+      | _ -> Lwt.return_unit
+  let remove {t = client; w} key =
+      let key' = Fmt.to_to_string K.pp key in
+      ignore (Client.run client [| "DEL"; key' |]);
+      W.notify w key None
+  let set' = set
+  let test_and_set t key ~test ~set =
+    find t key >>= fun v ->
+    if Irmin.Type.(equal (option V.t)) test v then (
+      (match set with
+        | None -> remove t key
+        | Some v -> set' t key v
+      ) >>= fun () ->
+      Lwt.return_true
+    ) else (
+      Lwt.return_false
+    )
+end
+```
