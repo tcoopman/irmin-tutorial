@@ -2,7 +2,7 @@
 
 ## What is Irmin?
 
-`irmin` is a key-value store based on the same principles as git. It provides the ability to perform many interesting operations on stores like branching, merging and reverting. Typically Irmin is embedded into an OCaml application, but there are also several tools like [irmin-http](https://github.com/mirage/irmin), [irmin-graphql](https://github.com/andreas/irmin-graphql), [irmin-resp](https://github.com/zshipko/irmin-resp) that allow you to use it as a standalone server. In this introduction I will explain how to get started using both the library and the command-line tool.
+`irmin` is a key-value store based on the same principles as git. It provides the ability to perform many interesting operations on stores like branching, merging and reverting. Typically Irmin is embedded into an OCaml application, but there are also several tools like [irmin-http](https://github.com/mirage/irmin), [irmin-rpc](https://github.com/zshipko/irmin-rpc), [irmin-graphql](https://github.com/andreas/irmin-graphql), [irmin-resp](https://github.com/zshipko/irmin-resp) that allow you to use it as a standalone server. In this introduction I will explain how to get started using both the library and the command-line tool.
 
 ## Getting started using the command-line
 
@@ -47,7 +47,7 @@ See the output of `irmin help irmin.yml` for more details.
 
 ## Getting started using OCaml
 
-Irmin has the ability to adapt to existing data structures using a convenient type combinator ([Irmin.Type](https://mirage.github.io/irmin/irmin/Irmin/Type/index.html)), which is used to define ([Contents](https://mirage.github.io/irmin/irmin/Irmin/Contents/index.html)). Additionally, you have a choice of storage backends. By default, Irmin provides a few options: an in-memory store, a filesystem store, a git-compatible in-memory store and a git-compatible filesystem store. Of course, it's also possible to implement your own storage backend. Nearly everything in `Irmin` is configurable including the hash function, branch, key and metadata types. Because of this there are a lot of different options to pick from; I will do my best to explain the most basic usage and work up from there.
+Irmin has the ability to adapt to existing data structures using a convenient type combinator ([Irmin.Type](https://mirage.github.io/irmin/irmin/Irmin/Type/index.html)), which is used to define ([Contents](https://mirage.github.io/irmin/irmin/Irmin/Contents/index.html)). Additionally, you have a choice of storage backends. By default, Irmin provides a few options: an in-memory store, a filesystem store, a git-compatible in-memory store and a git-compatible filesystem store. Of course, it's also possible to implement your own storage backend! Nearly everything in `Irmin` is configurable including the hash function, branch, key and metadata types. Because of this there are a lot of different options to pick from; I will do my best to explain the most basic usage and work up from there.
 
 The default `Contents` are available under [Irmin.Contents](https://mirage.github.io/irmin/irmin/Irmin/Contents/index.html), but the storage backends are all implemented as separate modules. The core backends are on opam as `irmin-mem`, `irmin-fs` and `irmin-git`. These packages define the way that the data should be organized, but not any I/O routines. Luckily, `irmin-unix` implements the I/O routines needed to make Irmin work on unix-like platforms and `irmin-mirage` provides the same for unikernels built using [Mirage](https://mirage.io).
 
