@@ -53,13 +53,15 @@ Next, define the append-only (`AO`) interface:
 module AO (K: Irmin.Hash.S) (V: Irmin.Contents.Conv) = struct
   include RO(K)(V)
   let add client value =
-      let key = K.digest V.t value in
-      let key' = Fmt.to_to_string K.pp key in
+      let hash = K.digest V.t value in
+      let key = Fmt.to_to_string K.pp hash in
       let value = Fmt.to_to_string V.pp value in
-      ignore (Client.run client [| "SET"; key'; value |]);
-      Lwt.return key
+      ignore (Client.run client [| "SET"; key; value |]);
+      Lwt.return hash
 end
 ```
+
+`AO` includes the previous definition of `RO` and defines an additional function `add`,  which takes a value, hashes it, stores the association and returns the hash.
 
 ### The link store
 
@@ -76,18 +78,33 @@ end
 
 ## The read-write store
 
+The `RW` store has many more types and values that need to be defined, however once you've made it this far it's too late to turn back! We will start of by using the `RO` functor we defined above to create a `RO` module:
+
 ```ocaml
 module RW (K: Irmin.Contents.Conv) (V: Irmin.Contents.Conv) = struct
   module RO = RO(K)(V)
+```
+
+There are a few types we need to declare next. `key` and `value` should match `RO.key` and `RO.value` and `watch` is used to declare the type of the watcher -- this is used to send notifications when the store has been updated. [irmin-watcher](https://github.com/mirage/irmin-watcher) has some more information if you're curious.
+
+```ocaml
   module W = Irmin.Private.Watch.Make(K)(V)
   type t = { t: RO.t; w: W.t }
   type key = RO.key
   type value = RO.value
   type watch = W.watch
+```
+
+The `watches` variable defined below is used to track active watches.
+
+```ocaml
   let watches = W.v ()
+```
+
+```ocaml
   let find t = RO.find t.t
   let mem t  = RO.mem t.t
-  let watch_key t key = Fmt.pr "%a\n%!" K.pp key; W.watch_key t.w key
+  let watch_key t key = W.watch_key t.w key
   let watch t = W.watch t.w
   let unwatch t = W.unwatch t.w
   let list {t = client; _} =
@@ -111,13 +128,12 @@ module RW (K: Irmin.Contents.Conv) (V: Irmin.Contents.Conv) = struct
       let key' = Fmt.to_to_string K.pp key in
       ignore (Client.run client [| "DEL"; key' |]);
       W.notify w key None
-  let set' = set
-  let test_and_set t key ~test ~set =
+  let test_and_set t key ~test ~set:s =
     find t key >>= fun v ->
     if Irmin.Type.(equal (option V.t)) test v then (
-      (match set with
+      (match s with
         | None -> remove t key
-        | Some v -> set' t key v
+        | Some v -> set t key v
       ) >>= fun () ->
       Lwt.return_true
     ) else (
