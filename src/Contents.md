@@ -1,18 +1,34 @@
 # Custom content types
 
-At some point working with `Irmin` you will probably want to move beyond using the default content types. This section will explain how custom datatypes can be implemented using [Irmin.Type](https://mirage.github.io/irmin/irmin/Irmin/Type/index.html). Before continuing with these examples make sure to read through the [official documentation](https://docs.mirage.io/irmin/Irmin/Type/index.html), which does a good job of outlining what types are defined and an overview of how theyre used.
+At some point working with `Irmin` you will probably want to move beyond using the default content types. This section will explain how custom datatypes can be implemented using [Irmin.Type](https://mirage.github.io/irmin/irmin/Irmin/Type/index.html). Before continuing with these examples make sure to read through the [official documentation](https://docs.mirage.io/irmin/Irmin/Type/index.html), which does a good job of outlining what types are defined and an overview of how they're used.
 
-Now let's create a custom type and define the functions required by [Irmin.Contents.S](https://docs.mirage.io/irmin/Irmin/Contents/module-type-S/index.html) using a simple datatype and then another more complex example after.
+Now that you've read through the documentation, let's create a custom type and define the functions required by [Irmin.Contents.S](https://docs.mirage.io/irmin/Irmin/Contents/module-type-S/index.html). I will show you a few examples:
+
+- [Counter](#counter)
+- [Record](#record)
+- [Association list](#association-list)
+
+## Overview
+
+To create a content type you need to define the following:
+
+- A type `t`
+- A value `t` of type `Irmin.Type.t`
+- A function `pp` for formatting `t`
+- A function `of_string` for converting from `string` to `t`
+- A function merge, which performs a three-way merge
 
 ## Counter
+
+A counter is just a simple `int64` value that can be incremented and decremented, when counters are merged the values will be added together.
+
+To get started, you will need to define a type `t` and build a value `t` using the functions provided in [Irmin.Type](https://docs.mirage.io/irmin/Irmin/Type/index.html). In this case all we need is the existing `int64` value, but in most cases it won't be this simple! 
 
 ```ocaml
 module Counter: Irmin.Contents.S with type t = int64 = struct
 	type t = int64
 	let t = Irmin.Type.int64
 ```
-
-A counter is just a simple `int64` value that can be incremented and decremented. Luckily Irmin already defines and `int64` type so we don't have to define our own.
 
 Next we will need to define some functions for converting to and from strings.
 
@@ -29,21 +45,29 @@ Next we will need to define some functions for converting to and from strings.
 		| None -> Error (`Msg "invalid counter value")
 ```
 
-And `of_string` is used to convert a formatted string back to our original type. It returns ```(t, [`Msg of string]) result```, which allows for an error message to be passed back to the user if the string is invalid.
+And `of_string` is used to convert a formatted string back to our original type. It returns ```(t, [`Msg of string]) result```, which allows for an error message to be passed back to the user if the value is invalid.
 
-Finally, we need to define a merge function. For our counter type we can just add the values when merging, this is a much simplier situation than you will encounter but was picked to illustrate a very simple case. Typically when writing a merge function you will need to deal with how to handle conflicts, this will be covered in the example after this one.
+Finally, we need to define a merge function.  There is already a `counter` implementation available in [Irmin.Merge](https://docs.mirage.io/irmin/Irmin/Merge/index.html), so you will never need to implement this yourself.
 
 ```ocaml
 	let merge ~old a b =
-		Lwt.return (Ok (Int64.add a b))
+	    let open Irmin.Merge.Infix in
+		old () >|=* fun old ->
+        let old = match old with None -> 0L | Some o -> o in
+        let (+) = Int64.add and (-) = Int64.sub in
+        a + b - old
 ```
 
 ```ocaml
     let merge = Irmin.Merge.(option (v t merge))
+    
+end
 ```
 
+If we were to leverage the existing implementation it would be even simpler:
+
 ```ocaml
-end
+let merge = Irmin.Merge.(option counter)
 ```
 
 Now this `Counter` module can be used as the contents of an Irmin store:
@@ -54,9 +78,9 @@ module Counter_mem_store = Irmin_mem.KV(Counter)
 
 ## Record
 
-Now let's wrap a record type so it can be stored directly in Irmin.
+In this example I will wrap a record type so it can be stored directly in Irmin.
 
-Here is a `car` type that we will use as content type for our store. The key type will be VIN numbers, so maybe this is a list of clients for an automotive repair shop.
+Here is a `car` type that we will use as content type for our store:
 
 ```ocaml
 type color =
@@ -68,6 +92,7 @@ and car = {
     year: int32;
     make_and_model: string * string;
     color: color;
+    owner: string;
 }
 ```
 
@@ -93,12 +118,13 @@ This is mapping variant cases to their names in string representation. Records a
 ```ocaml
     let t =
         let open Irmin.Type in
-        record "car" (fun license year make_and_model color ->
-            {license; year; make_and_model; color})
+        record "car" (fun license year make_and_model color owner ->
+            {license; year; make_and_model; color; owner})
         |+ field "license" string (fun t -> t.license)
         |+ field "year" int32 (fun t -> t.year)
         |+ field "make_and_model" (pair string string) (fun t -> t.make_and_model)
         |+ field "color" color (fun t -> t.color)
+        |+ field "owner" string (fun t -> t.owner)
         |> sealr
 ```
 
@@ -120,10 +146,11 @@ And the merge operation:
 
 ```ocaml
     let merge = Irmin.Merge.(option (idempotent t))
+    
 end
 ```
 
-Now some examples using `Car`:
+Now some examples using `Car` -- we will map VIN numbers to cars, this could be used by a tow company or an auto shop to identify cars:
 
 ```ocaml
 module Car_store = Irmin_mem.KV(Car)
@@ -133,6 +160,7 @@ let car_a = {
     license = "ABCD123";
     year = 2002;
     make_and_model = ("Honda", "Accord");
+    owner = "Jane Doe";
 }
 
 let car_b = {
@@ -140,6 +168,7 @@ let car_b = {
     license = "MYCAR00";
     year = "2016";
     make_and_model = ("Toyota", "Corolla");
+    owner = "Mike Jones";
 }
 
 let add_car store vin car =
@@ -157,9 +186,11 @@ let main =
 let () = Lwt.run main
 ```
 
-## Object
+## Association list
 
-In this example we will define an object type that maps string keys to string values. The type itself is not very complicated, but the merge function is.
+In this example we will define an association list that maps string keys to string values. The type itself is not very complicated, but the merge function is even more complex than the previous two examples.
+
+Like the two examples above, you need to define a `t` type and a `t` value of type `Irmin.Type.t` to begin:
 
 ```ocaml
 module Object = struct
@@ -183,30 +214,14 @@ And `of_string`:
         Irmin.Type.decode_json t decoder
 ```
 
-Then we can leverage `Irmin.Merge.alist` to define a merge function for associative lists. In this case we are using strings for both the keys and values, however `alist` requires you to have written merge functions for both the key and value types so it can get quite complicated depending on your types. For a slightly more complicated example you can look at `merge_object` and `merge_value` in [contents.ml](https://github.com/mirage/irmin/blob/master/src/irmin/contents.ml), which implements JSON contents for Irmin.
+Finally, we can leverage `Irmin.Merge.alist` to define a merge function for associative lists. In this case we are using strings for both the keys and values, however `alist` requires you to have written merge functions for both the key and value types so it can get quite complicated depending on your types. For a slightly more complicated example you can look at `merge_object` and `merge_value` in [contents.ml](https://github.com/mirage/irmin/blob/master/src/irmin/contents.ml), which implements JSON contents for Irmin.
+
 
 ```ocaml
-    let merge_object ~old x y =
-        let open Irmin.Merge.Infix in
-        let m = Irmin.Merge.(alist Irmin.Type.string Irmin.Type.string (fun _key -> option string)) in
-        Irmin.Merge.(f m ~old x y) >>=* fun x' -> Irmin.Merge.ok x'
-```
-
-`merge_object` is a 3-way merge function for our object type. It ensures that a key will not be overwritten by a merge, but allows new keys to be added.
-
-```ocaml
-    let merge ~old a b =
-        let open Irmin.Merge.Infix in
-        let equal = Irmin.Type.equal t in
-        old () >>=* function
-        | Some old ->
-            if equal old a then Irmin.Merge.ok b
-            else if equal old b then Irmin.Merge.ok a
-            else merge_object (fun () -> Irmin.Merge.ok (Some old)) a b
-        | None -> merge_object (fun () -> Irmin.Merge.ok None) a b
-    (* Define the merge operation using our merge function *)
-    let merge = Irmin.Merge.(option (v t merge))
+    let merge_alist =
+        Irmin.Merge.(alist Irmin.Type.string Irmin.Type.string (fun _key -> option string))
+    let merge = Irmin.Merge.(option merge_alist)
 end
 ```
 
-Now you should be ready to follow along with the [custom_merge](https://github.com/mirage/irmin/blob/master/examples/custom_merge.ml) example in the Irmin repository.
+If still want another example then check out the [custom merge](https://github.com/mirage/irmin/blob/master/examples/custom_merge.ml) example in the Irmin repository, which illustrates how to write a mergeable log.
