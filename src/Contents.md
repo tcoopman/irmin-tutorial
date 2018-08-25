@@ -22,7 +22,7 @@ To create a content type you need to define the following:
 
 A counter is just a simple `int64` value that can be incremented and decremented, when counters are merged the values will be added together.
 
-To get started, you will need to define a type `t` and build a value `t` using the functions provided in [Irmin.Type](https://docs.mirage.io/irmin/Irmin/Type/index.html). In this case all we need is the existing `int64` value, but in most cases it won't be this simple! 
+To get started, you will need to define a type `t` and build a value `t` using the functions provided in [Irmin.Type](https://docs.mirage.io/irmin/Irmin/Type/index.html). In this case all we need is the existing `int64` value, but in most cases it won't be this simple!
 
 ```ocaml
 module Counter: Irmin.Contents.S with type t = int64 = struct
@@ -60,7 +60,7 @@ Finally, we need to define a merge function.  There is already a `counter` imple
 
 ```ocaml
     let merge = Irmin.Merge.(option (v t merge))
-    
+
 end
 ```
 
@@ -146,7 +146,7 @@ And the merge operation:
 
 ```ocaml
     let merge = Irmin.Merge.(option (idempotent t))
-    
+
 end
 ```
 

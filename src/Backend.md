@@ -101,12 +101,23 @@ The `watches` variable defined below is used to track active watches.
   let watches = W.v ()
 ```
 
+The next few functions are just wrappers around the implementations in `RO`:
+
 ```ocaml
   let find t = RO.find t.t
   let mem t  = RO.mem t.t
+```
+
+Then some wrappers around `watch_key`, `watch` and `unwatch`:
+
+```ocaml
   let watch_key t key = W.watch_key t.w key
   let watch t = W.watch t.w
   let unwatch t = W.unwatch t.w
+```
+
+
+```ocaml
   let list {t = client; _} =
       match Client.run client [| "KEYS"; "*" |] with
       | Array arr ->
