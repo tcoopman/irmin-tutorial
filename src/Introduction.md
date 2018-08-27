@@ -7,4 +7,3 @@
 ## What can I use it for?
 
 It is typically used to store application data, like configuration values, shared state or checkpoint snapshots, but can be used as a general purpose key-value store too. Since it is compatible with Git, `irmin` can be used to interact with git repositories directly from your application.
-

@@ -4,7 +4,9 @@ Irmin has the ability to adapt to existing data structures using a convenient ty
 
 The default `Contents` are available under [Irmin.Contents](https://mirage.github.io/irmin/irmin/Irmin/Contents/index.html), but the storage backends are all implemented as separate modules. The core backends are on opam as `irmin-mem`, `irmin-fs` and `irmin-git`. These packages define the way that the data should be organized, but not any I/O routines. Luckily, `irmin-unix` implements the I/O routines needed to make Irmin work on unix-like platforms and `irmin-mirage` provides the same for unikernels built using [Mirage](https://mirage.io).
 
-Let's create a couple different stores...
+It is important to remember that most `Irmin` functions return `Lwt.t` values, which means that you will need to use `Lwt_main.run` to execute them. If you're not familiar with [Lwt](https://github.com/ocsigen/lwt) then I suggest [this tutorial](https://mirage.io/wiki/tutorial-lwt).
+
+## Creating a store
 
 An in-memory store with string contents:
 
@@ -12,15 +14,25 @@ An in-memory store with string contents:
 module Mem_store = Irmin_mem.KV(Irmin.Contents.String)
 ```
 
-An on-disk git store with json contents:
+An on-disk git store with JSON contents:
 
 ```ocaml
 module Git_store = Irmin_unix.Git.FS.KV(Irmin.Contents.Json)
 ```
 
-(In these examples I am using an [Irmin.KV]( https://mirage.github.io/irmin/irmin/Irmin/module-type-KV/index.html) store which is a specialization of [Irmin.S](https://mirage.github.io/irmin/irmin/Irmin/module-type-S/index.html) with string list keys, string branches and no metadata.)
+These examples are using a [Irmin.KV]( https://mirage.github.io/irmin/irmin/Irmin/module-type-KV/index.html) store which is a specialization of [Irmin.S](https://mirage.github.io/irmin/irmin/Irmin/module-type-S/index.html) with string list keys, string branches and no metadata.
 
-Before calling any functions, it is important to remember that most `Irmin` functions return `Lwt.t` values, which means that you will need to use `Lwt_main.run` to execute them. If you're not familiar with [Lwt](https://github.com/ocsigen/lwt) then I suggest [this tutorial](https://mirage.io/wiki/tutorial-lwt).
+The following example is the same as the first, using `Irmin_mem.Make` instead of `Irmin_mem.KV`:
+
+```ocaml
+module Mem_Store =
+    Irmin_mem.Make
+        (Irmin.Metadata.None)
+        (Irmin.Contents.Json)
+        (Irmin.Path.String_list)
+        (Irmin.Branch.String)
+        (Irmin.Hash.SHA1)
+```
 
 ## Configuring and creating a repo
 
@@ -80,7 +92,7 @@ let _ = Lwt_main.run main
 
 ## Transactions
 
-Transactions allow you to make many modifications to an Irmin store, using in in-memory tree, and apply them all at once. This is done using the `Store.with_tree` function:
+Transactions allow you to make many modifications to an Irmin store, using an in-memory tree, and apply them all at once. This is done using the `Store.with_tree` function:
 
 ```ocaml
 let transaction_example =
@@ -95,6 +107,8 @@ Mem_store.with_tree t [] ~info (fun tree ->
 let _ = Lwt_main.run transaction_example
 ```
 
+A tree can be modified directly using the functions in [Irmin.S.Tree](https://mirage.github.io/irmin/irmin/Irmin/module-type-S/Tree/index.html). When a tree is returned by the `with_tree` callback will be applied at the given key (`[]` in the example above).
+
 Here is an example `move` function to move files from one prefix to another:
 
 ```ocaml
@@ -108,5 +122,3 @@ let move t ~src ~dest =
         | None -> Lwt.return_none
     )
 ```
-
-See [Irmin.S.Tree](https://mirage.github.io/irmin/irmin/Irmin/module-type-S/Tree/index.html) for more information about operations that can be performed on trees.
