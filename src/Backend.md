@@ -24,6 +24,7 @@ Additionally, it requires two functions:
 - `find`: returns the value associated with a key (if it exists)
 
 ```ocaml
+open Lwt.Infix
 open Hiredis
 module RO (K: Irmin.Contents.Conv) (V: Irmin.Contents.Conv) = struct
   type t = Client.t

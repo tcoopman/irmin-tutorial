@@ -60,7 +60,6 @@ Finally, we need to define a merge function.  There is already a `counter` imple
 
 ```ocaml
     let merge = Irmin.Merge.(option (v t merge))
-
 end
 ```
 
@@ -96,10 +95,12 @@ and car = {
 }
 ```
 
-Let's turn it into a representation that Irmin will understand! First color has to be wrapped, variants are modeled using the `variant` function:
+Next it needs to be modeled using `Irmin.Type` before it can be stored using Irmin.
+
+First color has to be wrapped, variants are modeled using the `variant` function:
 
 ```ocaml
-module Car: Irmin.Contents.S with type t = car = struct
+module Car = struct
     type t  = car
     let color =
         let open Irmin.Type in
@@ -134,7 +135,7 @@ Finally, we can use the builtin JSON encoding and merge function:
 	let pp = Irmin.Type.pp_json t
 ```
 
-This example uses `Irmin.Type.pp_json`, the predefined JSON pretty-printer, rather than writing our own. As types get more and more complex it is very nice to be able to use the JSON formatter to avoid having to write custom functions for encoding and decoding values.
+This example uses `Irmin.Type.pp_json`, the predefined JSON pretty-printer, rather than writing our own. As types get more and more complex it is very nice to be able to use the JSON formatter to avoid having to write ad-hoc functions for encoding and decoding values.
 
 ```ocaml
     let of_string s =
@@ -146,7 +147,6 @@ And the merge operation:
 
 ```ocaml
     let merge = Irmin.Merge.(option (idempotent t))
-
 end
 ```
 
