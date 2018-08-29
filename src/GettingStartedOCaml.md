@@ -1,8 +1,10 @@
 # Getting started using OCaml
 
-Irmin has the ability to adapt to existing data structures using a convenient type combinator ([Irmin.Type](https://mirage.github.io/irmin/irmin/Irmin/Type/index.html)), which is used to define ([Contents](https://mirage.github.io/irmin/irmin/Irmin/Contents/index.html)). Additionally, you have a choice of storage backends. By default, Irmin provides a few options: an in-memory store, a filesystem store, a git-compatible in-memory store and a git-compatible filesystem store. Of course, it's also possible to implement your own storage backend! Nearly everything in `Irmin` is configurable including the hash function, branch, key and metadata types. Because of this there are a lot of different options to pick from; I will do my best to explain the most basic usage and work up from there.
+When setting up and Irmin database in OCaml you will need to consider at least the content type and storage backend. This is because Irmin has the ability to adapt to existing data structures using a convenient type combinator ([Irmin.Type](https://mirage.github.io/irmin/irmin/Irmin/Type/index.html)), which is used to define ([Contents](https://mirage.github.io/irmin/irmin/Irmin/Contents/index.html)). By default, Irmin provides a few options for storage: an in-memory store, a filesystem store, a git-compatible in-memory store and a git-compatible filesystem store.
 
-The default `Contents` are available under [Irmin.Contents](https://mirage.github.io/irmin/irmin/Irmin/Contents/index.html), but the storage backends are all implemented as separate modules. The core backends are on opam as `irmin-mem`, `irmin-fs` and `irmin-git`. These packages define the way that the data should be organized, but not any I/O routines. Luckily, `irmin-unix` implements the I/O routines needed to make Irmin work on unix-like platforms and `irmin-mirage` provides the same for unikernels built using [Mirage](https://mirage.io).
+It's also possible to implement your own storage backend if you'd like -- nearly everything in `Irmin` is configurable! This includes the hash function, branch, key and metadata types. Because of this there are a lot of different options to pick from; I will do my best to explain the most basic usage and work up from there.
+
+The default `Contents` are available under [Irmin.Contents](https://mirage.github.io/irmin/irmin/Irmin/Contents/index.html). The default backends are implemented as separate modules, they are on opam as `irmin-mem`, `irmin-fs` and `irmin-git`. These packages define the way that the data should be organized, but not any I/O routines (with the exception of `irmin-mem` which does no IO.) Luckily, `irmin-unix` implements the I/O routines needed to make Irmin work on unix-like platforms and `irmin-mirage` provides the same for unikernels built using [Mirage](https://mirage.io).
 
 It is important to remember that most `Irmin` functions return `Lwt.t` values, which means that you will need to use `Lwt_main.run` to execute them. If you're not familiar with [Lwt](https://github.com/ocsigen/lwt) then I suggest [this tutorial](https://mirage.io/wiki/tutorial-lwt).
 
@@ -72,7 +74,7 @@ let branch config name =
 
 ## Modifying the store
 
-Now, using everything I've laid out above, you can finally begin to read and write to the store using `get` and `set`.
+Now, using everything I've laid out above, you can finally begin to interact with the store using `get` and `set`.
 
 ```ocaml
 let info message = Irmin_unix.info ~author:"Example" "%s"
@@ -92,7 +94,7 @@ let _ = Lwt_main.run main
 
 ## Transactions
 
-Transactions allow you to make many modifications to an Irmin store, using an in-memory tree, and apply them all at once. This is done using the `Store.with_tree` function:
+[Transactions](https://mirage.github.io/irmin/irmin/Irmin/module-type-S_MAKER/index.html#type-transaction) allow you to make many modifications using an in-memory tree then apply them all at once. This is done using [with_tree](https://mirage.github.io/irmin/irmin/Irmin/module-type-S_MAKER/index.html#val-with_tree):
 
 ```ocaml
 let transaction_example =
@@ -107,7 +109,7 @@ Mem_store.with_tree t [] ~info (fun tree ->
 let _ = Lwt_main.run transaction_example
 ```
 
-A tree can be modified directly using the functions in [Irmin.S.Tree](https://mirage.github.io/irmin/irmin/Irmin/module-type-S/Tree/index.html). When a tree is returned by the `with_tree` callback will be applied at the given key (`[]` in the example above).
+A tree can be modified directly using the functions in [Irmin.S.Tree](https://mirage.github.io/irmin/irmin/Irmin/module-type-S/Tree/index.html). When a tree is returned by the `with_tree` callback, it will be applied using the transaction's `strategy` at the given key (for example, `[]` in the code above).
 
 Here is an example `move` function to move files from one prefix to another:
 
@@ -121,4 +123,6 @@ let move t ~src ~dest =
             Mem_store.Tree.add_tree tr dest v >>= Lwt.return_some
         | None -> Lwt.return_none
     )
+
+let _ = Lwt_main.run (move t ["a"] ["foo"])
 ```
