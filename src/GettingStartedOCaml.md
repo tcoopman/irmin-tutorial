@@ -1,10 +1,10 @@
 # Getting started using OCaml
 
-When setting up and Irmin database in OCaml you will need to consider at least the content type and storage backend. This is because Irmin has the ability to adapt to existing data structures using a convenient type combinator ([Irmin.Type](https://mirage.github.io/irmin/irmin/Irmin/Type/index.html)), which is used to define ([Contents](https://mirage.github.io/irmin/irmin/Irmin/Contents/index.html)). By default, Irmin provides a few options for storage: an in-memory store, a filesystem store, a git-compatible in-memory store and a git-compatible filesystem store.
+When setting up and Irmin database in OCaml you will need to consider, at least, the content type and storage backend. This is because Irmin has the ability to adapt to existing data structures using a convenient type combinator ([Irmin.Type](https://mirage.github.io/irmin/irmin/Irmin/Type/index.html)), which is used to define ([Contents](https://mirage.github.io/irmin/irmin/Irmin/Contents/index.html)). By default, Irmin provides a few options for storage: an in-memory store, a filesystem store, a git-compatible in-memory store and a git-compatible filesystem store.
 
-It's also possible to implement your own storage backend if you'd like -- nearly everything in `Irmin` is configurable! This includes the hash function, branch, key and metadata types. Because of this there are a lot of different options to pick from; I will do my best to explain the most basic usage and work up from there.
+It's also possible to implement your own storage backend if you'd like -- nearly everything in `Irmin` is configurable! This includes the hash function, branch, key and metadata types. Because of this flexibility there are a lot of different options to pick from; I will do my best to explain the most basic usage and work up from there.
 
-The default `Contents` are available under [Irmin.Contents](https://mirage.github.io/irmin/irmin/Irmin/Contents/index.html). The default backends are implemented as separate modules, they are on opam as `irmin-mem`, `irmin-fs` and `irmin-git`. These packages define the way that the data should be organized, but not any I/O routines (with the exception of `irmin-mem` which does no IO.) Luckily, `irmin-unix` implements the I/O routines needed to make Irmin work on unix-like platforms and `irmin-mirage` provides the same for unikernels built using [Mirage](https://mirage.io).
+The default content types are available in [Irmin.Contents](https://mirage.github.io/irmin/irmin/Irmin/Contents/index.html). However, the default backends are implemented as separate modules, they are on opam as `irmin-mem`, `irmin-fs` and `irmin-git`. These packages define the way that the data should be organized, but not any I/O routines (with the exception of `irmin-mem`, which does no I/O). Luckily, `irmin-unix` implements the I/O routines needed to make Irmin work on unix-like platforms and `irmin-mirage` provides the same for unikernels built using [Mirage](https://mirage.io).
 
 It is important to remember that most `Irmin` functions return `Lwt.t` values, which means that you will need to use `Lwt_main.run` to execute them. If you're not familiar with [Lwt](https://github.com/ocsigen/lwt) then I suggest [this tutorial](https://mirage.io/wiki/tutorial-lwt).
 
@@ -126,3 +126,32 @@ let move t ~src ~dest =
 
 let _ = Lwt_main.run (move t ["a"] ["foo"])
 ```
+
+## Sync
+
+[Irmin.Sync](https://docs.mirage.io/irmin/Irmin/Sync/index.html) implements the functions needed to interact with remote stores.
+
+- [fetch](https://docs.mirage.io/irmin/Irmin/Sync/index.html#val-fetch) populates a local store with objects from a remote store
+- [pull](https://docs.mirage.io/irmin/Irmin/Sync/index.html#val-pull) updates a local store with objects from a remote store
+- [push](https://docs.mirage.io/irmin/Irmin/Sync/index.html#val-fpush) updates a remote store with objects from a local store
+
+Each of these also has an `_exn` variant which may raise an exception instead of returning `result` value.
+
+For example, you can pull a repo, modify `README.md` and push it back:
+
+```ocaml
+module Sync = Irmin.Sync(Mem_store)
+
+let remote = Irmin.remote "https://github.com/zshipko/irmin-tutorial.git"
+
+let modify_readme =
+    Mem_store.Repo.v config >>= Mem_store.master >>= fun t ->
+    Sync.pull_exn t remote `Set >>= fun () ->
+    let info = info "example of updating README" in
+    Store.set t ["README.md"] "Some information about the project" ~info >>= fun () ->
+    Sync.push_exn t remote
+
+let _ = Lwt_main.run modify_readme
+```
+
+You may also want to take a look at the [sync](https://github.com/mirage/irmin/blob/master/examples/sync.ml) example in the Irmin repository.

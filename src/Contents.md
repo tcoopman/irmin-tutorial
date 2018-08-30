@@ -1,8 +1,10 @@
 # Custom content types
 
-At some point working with `Irmin` you will probably want to move beyond using the default content types. This section will explain how custom datatypes can be implemented using [Irmin.Type](https://mirage.github.io/irmin/irmin/Irmin/Type/index.html). Before continuing with these examples make sure to read through the [official documentation](https://docs.mirage.io/irmin/Irmin/Type/index.html), which does a good job of outlining what types are defined and an overview of how they're used.
+At some point working with `Irmin` you will probably want to move beyond using the default content types. This section will explain how custom datatypes can be implemented using [Irmin.Type](https://mirage.github.io/irmin/irmin/Irmin/Type/index.html). Before continuing with these examples make sure to read through the [official documentation](https://docs.mirage.io/irmin/Irmin/Type/index.html), which has information about the defined types and how they're used.
 
-Now that you've read through the documentation, let's create a custom type and define the functions required by [Irmin.Contents.S](https://docs.mirage.io/irmin/Irmin/Contents/module-type-S/index.html). I will show you a few examples:
+...
+
+Now that you've read through the documentation, let's create some custom types by defining the functions required by [Irmin.Contents.S](https://docs.mirage.io/irmin/Irmin/Contents/module-type-S/index.html). I will walk you through a few examples:
 
 - [Counter](#counter)
 - [Record](#record)
@@ -16,7 +18,7 @@ To create a content type you need to define the following:
 - A value `t` of type `Irmin.Type.t`
 - A function `pp` for formatting `t`
 - A function `of_string` for converting from `string` to `t`
-- A function merge, which performs a three-way merge
+- A function `merge`, which performs a three-way merge
 
 ## Counter
 
@@ -47,7 +49,7 @@ Next we will need to define some functions for converting to and from strings.
 
 And `of_string` is used to convert a formatted string back to our original type. It returns ```(t, [`Msg of string]) result```, which allows for an error message to be passed back to the user if the value is invalid.
 
-Finally, we need to define a merge function.  There is already a `counter` implementation available in [Irmin.Merge](https://docs.mirage.io/irmin/Irmin/Merge/index.html), so you will never need to implement this yourself.
+Finally, we need to define a merge function.  There is already a `counter` implementation available in [Irmin.Merge](https://docs.mirage.io/irmin/Irmin/Merge/index.html), so you wouldn't actually need to write this yourself:
 
 ```ocaml
 	let merge ~old a b =
@@ -95,9 +97,7 @@ and car = {
 }
 ```
 
-Next it needs to be modeled using `Irmin.Type` before it can be stored using Irmin.
-
-First color has to be wrapped, variants are modeled using the `variant` function:
+First color has to be wrapped, variants are modeled using the [variant](https://mirage.github.io/irmin/irmin/Irmin/Type/index.html#val-variant) function:
 
 ```ocaml
 module Car = struct
@@ -135,7 +135,7 @@ Finally, we can use the builtin JSON encoding and merge function:
 	let pp = Irmin.Type.pp_json t
 ```
 
-This example uses `Irmin.Type.pp_json`, the predefined JSON pretty-printer, rather than writing our own. As types get more and more complex it is very nice to be able to use the JSON formatter to avoid having to write ad-hoc functions for encoding and decoding values.
+This example uses [Irmin.Type.pp_json](https://mirage.github.io/irmin/irmin/Irmin/Type/index.html#val-pp_json) and [Irmin.Type.decode_json](https://mirage.github.io/irmin/irmin/Irmin/Type/index.html#val-decode_json) , the predefined JSON pretty-printer and parser, rather than writing our own. As types get more and more complex it is very nice to be able to use the JSON formatter to avoid having to write ad-hoc functions for encoding and decoding values.
 
 ```ocaml
     let of_string s =
@@ -224,4 +224,4 @@ Finally, we can leverage `Irmin.Merge.alist` to define a merge function for asso
 end
 ```
 
-If still want another example then check out the [custom merge](https://github.com/mirage/irmin/blob/master/examples/custom_merge.ml) example in the Irmin repository, which illustrates how to write a mergeable log.
+If you want another example then read through the [custom merge](https://github.com/mirage/irmin/blob/master/examples/custom_merge.ml) example in the Irmin repository, which illustrates how to write a mergeable log.
