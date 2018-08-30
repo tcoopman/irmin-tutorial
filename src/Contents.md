@@ -1,10 +1,12 @@
 # Custom content types
 
-At some point working with `Irmin` you will probably want to move beyond using the default content types. This section will explain how custom datatypes can be implemented using [Irmin.Type](https://mirage.github.io/irmin/irmin/Irmin/Type/index.html). Before continuing with these examples make sure to read through the [official documentation](https://docs.mirage.io/irmin/Irmin/Type/index.html), which has information about the defined types and how they're used.
+At some point working with `Irmin` you will probably want to move beyond using the default content types.
+
+This section will explain how custom datatypes can be implemented using [Irmin.Type](https://mirage.github.io/irmin/irmin/Irmin/Type/index.html). Before continuing with these examples make sure to read through the [official documentation](https://docs.mirage.io/irmin/Irmin/Type/index.html), which has information about the predefined types and how they're used.
 
 ...
 
-Now that you've read through the documentation, let's create some custom types by defining the functions required by [Irmin.Contents.S](https://docs.mirage.io/irmin/Irmin/Contents/module-type-S/index.html). I will walk you through a few examples:
+Now that you've read through the documentation, let's create some contents by defining the functions required by the [Irmin.Contents.S](https://docs.mirage.io/irmin/Irmin/Contents/module-type-S/index.html) interface. This section will walk you through a few different examples:
 
 - [Counter](#counter)
 - [Record](#record)
@@ -214,7 +216,7 @@ And `of_string`:
         Irmin.Type.decode_json t decoder
 ```
 
-Finally, we can leverage `Irmin.Merge.alist` to define a merge function for associative lists. In this case we are using strings for both the keys and values, however `alist` requires you to have written merge functions for both the key and value types so it can get quite complicated depending on your types. For a slightly more complicated example you can look at `merge_object` and `merge_value` in [contents.ml](https://github.com/mirage/irmin/blob/master/src/irmin/contents.ml), which implements JSON contents for Irmin.
+To write the merge function we can leverage `Irmin.Merge.alist`, which simplifies this process for association lists. In this example we are using strings for both the keys and values, however in most other cases `alist` can get a bit more complicated since it requires existing merge functions for both the key and value types. For a slightly more complicated example you can read through `merge_object` and `merge_value` in [contents.ml](https://github.com/mirage/irmin/blob/master/src/irmin/contents.ml), which are used to implement JSON contents for Irmin.
 
 
 ```ocaml
@@ -224,4 +226,4 @@ Finally, we can leverage `Irmin.Merge.alist` to define a merge function for asso
 end
 ```
 
-If you want another example then read through the [custom merge](https://github.com/mirage/irmin/blob/master/examples/custom_merge.ml) example in the Irmin repository, which illustrates how to write a mergeable log.
+If you want another example then check out the [custom merge](https://github.com/mirage/irmin/blob/master/examples/custom_merge.ml) example in the Irmin repository, which illustrates how to write a mergeable log.
