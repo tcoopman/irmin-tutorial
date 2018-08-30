@@ -1,10 +1,12 @@
 # Getting started using OCaml
 
-When setting up and Irmin database in OCaml you will need to consider, at least, the content type and storage backend. This is because Irmin has the ability to adapt to existing data structures using a convenient type combinator ([Irmin.Type](https://mirage.github.io/irmin/irmin/Irmin/Type/index.html)), which is used to define ([Contents](https://mirage.github.io/irmin/irmin/Irmin/Contents/index.html)). Irmin provides a few options for storage: an in-memory store (`irmin-mem`), a filesystem store (`irmin-fs`), a git-compatible in-memory store (`irmin-git`) and a git-compatible filesystem store (`irmin-git`). These packages define the way that the data should be organized, but not any I/O routines (with the exception of `irmin-mem`, which does no I/O). Luckily, `irmin-unix` implements the I/O routines needed to make Irmin work on unix-like platforms and `irmin-mirage` provides the same for unikernels built using [Mirage](https://mirage.io).
+When setting up and Irmin database in OCaml you will need to consider, at least, the content type and storage backend. This is because Irmin has the ability to adapt to existing data structures using a convenient type combinator ([Irmin.Type](https://mirage.github.io/irmin/irmin/Irmin/Type/index.html)), which is used to define [contents](https://mirage.github.io/irmin/irmin/Irmin/Contents/index.html) for your datastore. Irmin provides implementations for [String](https://mirage.github.io/irmin/irmin/Irmin/Contents/index.html#module-String), [Cstruct](https://mirage.github.io/irmin/irmin/Irmin/Contents/index.html#module-Cstruct), [Json](https://mirage.github.io/irmin/irmin/Irmin/Contents/index.html#module-Json) and [Json_value](https://mirage.github.io/irmin/irmin/Irmin/Contents/index.html#module-Json_value) contents, but it is also very easy to make your own!
 
-It's also possible to implement your own storage backend if you'd like -- nearly everything in `Irmin` is configurable! This includes the hash function, branch, key and metadata types. Because of this flexibility there are a lot of different options to pick from; I will do my best to explain the most basic usage and work up from there.
+Irmin provides a few options when it comes to storage: an in-memory store (`irmin-mem`), a filesystem store (`irmin-fs`), a git-compatible in-memory store (`irmin-git`) and a git-compatible filesystem store (`irmin-git`). These packages define the way that the data should be organized, but not any I/O routines (with the exception of `irmin-mem`, which does no I/O). Luckily, `irmin-unix` implements the I/O routines needed to make Irmin work on unix-like platforms and `irmin-mirage` provides the same for unikernels built using [Mirage](https://mirage.io).
 
-It is important to remember that most `Irmin` functions return `Lwt.t` values, which means that you will need to use `Lwt_main.run` to execute them. If you're not familiar with [Lwt](https://github.com/ocsigen/lwt) then I suggest [this tutorial](https://mirage.io/wiki/tutorial-lwt).
+It's also possible to implement your own storage backend if you'd like -- nearly everything in `Irmin` is configurable thanks to the power of functors in OCaml! This includes the hash function, branch, key and metadata types. Because of this flexibility there are a lot of different options to pick from; I will do my best to explain the most basic usage in this section and begin introducing more advanced concepts in subsequent sections.
+
+It is important to note that most `Irmin` functions return `Lwt.t` values, which means that you will need to use `Lwt_main.run` to execute them. If you're not familiar with [Lwt](https://github.com/ocsigen/lwt) then I suggest [this tutorial](https://mirage.io/wiki/tutorial-lwt).
 
 ## Creating a store
 
@@ -20,7 +22,7 @@ An on-disk git store with JSON contents:
 module Git_store = Irmin_unix.Git.FS.KV(Irmin.Contents.Json)
 ```
 
-These examples are using a [Irmin.KV]( https://mirage.github.io/irmin/irmin/Irmin/module-type-KV/index.html) store which is a specialization of [Irmin.S](https://mirage.github.io/irmin/irmin/Irmin/module-type-S/index.html) with string list keys, string branches and no metadata.
+These examples are using [Irmin.KV]( https://mirage.github.io/irmin/irmin/Irmin/module-type-KV/index.html), which is a specialization of [Irmin.S](https://mirage.github.io/irmin/irmin/Irmin/module-type-S/index.html) with string list keys, string branches and no metadata.
 
 The following example is the same as the first, using `Irmin_mem.Make` instead of `Irmin_mem.KV`:
 
@@ -40,12 +42,19 @@ Different store types require different configuration options -- an on-disk stor
 
 ```ocaml
 let git_config = Irmin_git.config ~bare:true "/tmp/irmin"
+```
+
+```ocaml
 let config = Irmin_mem.config ()
 ```
-Once you have created your configuration you can create an [Irmin.Repo](https://mirage.github.io/irmin/irmin/Irmin/Repo/index.html) using [Repo.v](https://mirage.github.io/irmin/irmin/Irmin/Make/Repo/index.html#val-v).
+
+With this configuration it's very easy to create an [Irmin.Repo](https://mirage.github.io/irmin/irmin/Irmin/Repo/index.html) using [Repo.v](https://mirage.github.io/irmin/irmin/Irmin/Make/Repo/index.html#val-v):
 
 ```ocaml
 let git_repo = Git_store.Repo.v git_config
+```
+
+```ocaml
 let repo = Mem_store.Repo.v config
 ```
 
@@ -72,22 +81,22 @@ let branch config name =
 
 ## Modifying the store
 
-Now, using everything I've laid out above, you can finally begin to interact with the store using `get` and `set`.
+Now you can begin to interact with the store using `get` and `set`.
 
 ```ocaml
 let info message = Irmin_unix.info ~author:"Example" "%s"
 
 let main =
-Mem_store.Repo.v config >>= Mem_store.master >>= fun t ->
+    Mem_store.Repo.v config >>= Mem_store.master >>= fun t ->
 
-(* Set a/b/c to "Hello, Irmin!" *)
-Mem_store.set t ["a"; "b"; "c"] "Hello, Irmin!" ~info:(info "my first commit") >>= fun () ->
+    (* Set a/b/c to "Hello, Irmin!" *)
+    Mem_store.set t ["a"; "b"; "c"] "Hello, Irmin!" ~info:(info "my first commit") >>= fun () ->
 
-(* Get a/b/c *)
-Mem_store.get t ["a"; "b"; "c"] >|= fun s ->
-assert (s = "Hello, Irmin!")
+    (* Get a/b/c *)
+    Mem_store.get t ["a"; "b"; "c"] >|= fun s ->
+    assert (s = "Hello, Irmin!")
 
-let _ = Lwt_main.run main
+let () = Lwt_main.run main
 ```
 
 ## Transactions
@@ -98,18 +107,18 @@ let _ = Lwt_main.run main
 let transaction_example =
 Mem_store.Repo.v config >>= Mem_store.master >>= fun t ->
 let info = Irmin_unix.info "example transaction" in
-Mem_store.with_tree t [] ~info (fun tree ->
+Mem_store.with_tree t [] ~info ~strategy:`Set (fun tree ->
     let tree = match tree with Some t -> t | None -> Mem_store.Tree.empty in
     Mem_store.Tree.remove tree ["foo"; "bar"] >>= fun tree ->
     Mem_store.Tree.add tree ["a"; "b"; "c"] "123" >>= fun tree ->
     Mem_store.Tree.add tree ["d"; "e"; "f"] "456" >>= Lwt.return_some)
 
-let _ = Lwt_main.run transaction_example
+let () = Lwt_main.run transaction_example
 ```
 
-A tree can be modified directly using the functions in [Irmin.S.Tree](https://mirage.github.io/irmin/irmin/Irmin/module-type-S/Tree/index.html). When a tree is returned by the `with_tree` callback, it will be applied using the transaction's `strategy` at the given key (for example, `[]` in the code above).
+A tree can be modified using the functions in [Irmin.S.Tree](https://mirage.github.io/irmin/irmin/Irmin/module-type-S/Tree/index.html), and when it is returned by the `with_tree` callback, it will be applied using the transaction's strategy (``` `Set``` in the code above)  at the given key (`[]` in the code above).
 
-Here is an example `move` function to move files from one prefix to another:
+Here is an example `move` function to move files from one path to another:
 
 ```ocaml
 let move t ~src ~dest =
@@ -122,7 +131,7 @@ let move t ~src ~dest =
         | None -> Lwt.return_none
     )
 
-let _ = Lwt_main.run (move t ["a"] ["foo"])
+let () = Lwt_main.run (move t ["a"] ["foo"])
 ```
 
 ## Sync
@@ -149,7 +158,5 @@ let modify_readme =
     Store.set t ["README.md"] "Some information about the project" ~info >>= fun () ->
     Sync.push_exn t remote
 
-let _ = Lwt_main.run modify_readme
+let () = Lwt_main.run modify_readme
 ```
-
-You may also want to take a look at the [sync](https://github.com/mirage/irmin/blob/master/examples/sync.ml) example in the Irmin repository.
