@@ -88,14 +88,11 @@ let info message = Irmin_unix.info ~author:"Example" "%s"
 
 let main =
     Mem_store.Repo.v config >>= Mem_store.master >>= fun t ->
-
     (* Set a/b/c to "Hello, Irmin!" *)
     Mem_store.set t ["a"; "b"; "c"] "Hello, Irmin!" ~info:(info "my first commit") >>= fun () ->
-
     (* Get a/b/c *)
     Mem_store.get t ["a"; "b"; "c"] >|= fun s ->
     assert (s = "Hello, Irmin!")
-
 let () = Lwt_main.run main
 ```
 
@@ -112,7 +109,6 @@ Mem_store.with_tree t [] ~info ~strategy:`Set (fun tree ->
     Mem_store.Tree.remove tree ["foo"; "bar"] >>= fun tree ->
     Mem_store.Tree.add tree ["a"; "b"; "c"] "123" >>= fun tree ->
     Mem_store.Tree.add tree ["d"; "e"; "f"] "456" >>= Lwt.return_some)
-
 let () = Lwt_main.run transaction_example
 ```
 
@@ -130,8 +126,11 @@ let move t ~src ~dest =
             Mem_store.Tree.add_tree tr dest v >>= Lwt.return_some
         | None -> Lwt.return_none
     )
-
-let () = Lwt_main.run (move t ["a"] ["foo"])
+let main =
+    Mem_store.Repo.v config >>= Mem_store.master >>= fun t ->
+    let info = Irmin_unix.info "move a -> foo" in
+    move t ~src:["a"] ~dest:["foo"] ~info
+let () = Lwt_main.run main
 ```
 
 ## Sync
@@ -144,19 +143,20 @@ let () = Lwt_main.run (move t ["a"] ["foo"])
 
 Each of these also has an `_exn` variant which may raise an exception instead of returning `result` value.
 
-For example, you can pull a repo, modify `README.md` and push it back:
+For example, you can pull a repo and list the files in the root of the project:
 
 ```ocaml
-module Sync = Irmin.Sync(Mem_store)
-
-let remote = Irmin.remote "https://github.com/zshipko/irmin-tutorial.git"
-
-let modify_readme =
-    Mem_store.Repo.v config >>= Mem_store.master >>= fun t ->
+open Irmin_unix
+module Git_mem_store = Git.Mem.KV(Irmin.Contents.String)
+module Sync = Irmin.Sync(Git_mem_store)
+let remote = Irmin.remote_uri "git://github.com/mirage/irmin.git"
+let main =
+    Git_mem_store.Repo.v config >>= Git_mem_store.master >>= fun t ->
     Sync.pull_exn t remote `Set >>= fun () ->
-    let info = info "example of updating README" in
-    Store.set t ["README.md"] "Some information about the project" ~info >>= fun () ->
-    Sync.push_exn t remote
-
-let () = Lwt_main.run modify_readme
+    Git_mem_store.list t [] >|= List.iter (fun (step, kind) ->
+        match kind with
+        | `Contents -> Printf.printf "FILE %s\n" step
+        | `Node -> Printf.printf "DIR %s\n" step
+    )
+let () = Lwt_main.run main
 ```

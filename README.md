@@ -1,6 +1,6 @@
 # irmin-tutorials
 
-A collection of examples for [irmin](https://github.com/mirage/irmin).
+A set of tutorials for getting started with [irmin](https://github.com/mirage/irmin).
 
 ## Dependencies
 
@@ -12,19 +12,23 @@ A collection of examples for [irmin](https://github.com/mirage/irmin).
 - [ocaml-hiredis](https://github.com/zshipko/ocaml-hiredis)
     - `opam install hiredis`
 - [mdBook](https://github.com/rust-lang-nursery/mdBook)
-    - requires Rust/Cargo
+    - required for buildint HTML output
     - `cargo install mdbook`
 
 ## Building
 
-All that's needed is:
+This will check and build the example code and an HTML version of the tutorials in `./book` (if mdBook is installed):
 
 ```shell
 $ make
 ```
 
-This will check the code embedded in the `.md` files and build an HTML version of the tutorials in `./book`
+## Running the example code
+
+```shell
+$ make run
+```
 
 ## Contributing
 
-Contributions are encouraged! If you think something is missing or could be explained better please open a pull-request.
+Contributions are encouraged! If you think something is missing or could be explained better please open an issue.

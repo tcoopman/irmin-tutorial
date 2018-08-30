@@ -95,7 +95,7 @@ function playpen_text(playpen) {
         var result_block = code_block.querySelector(".result");
         if (!result_block) {
             result_block = document.createElement('code');
-            result_block.className = 'result hljs language-bash';
+            result_block.className = 'result hljs language-shell';
 
             code_block.append(result_block);
         }
@@ -138,7 +138,7 @@ function playpen_text(playpen) {
         // blocks or highlightjs will capture events
         Array
             .from(document.querySelectorAll('code.editable'))
-            .forEach(function (block) { block.classList.remove('language-rust'); });
+            .forEach(function (block) { block.classList.remove('language-ocaml'); });
 
         Array
             .from(document.querySelectorAll('code:not(.editable)'))
@@ -155,7 +155,7 @@ function playpen_text(playpen) {
         .from(document.querySelectorAll('code'))
         .forEach(function (block) { block.classList.add('hljs'); });
 
-    Array.from(document.querySelectorAll("code.language-rust")).forEach(function (block) {
+    Array.from(document.querySelectorAll("code.language-ocaml")).forEach(function (block) {
 
         var code_block = block;
         var pre_block = block.parentNode;
