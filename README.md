@@ -1,6 +1,6 @@
 # irmin-tutorials
 
-A set of tutorials for getting started with [irmin](https://github.com/mirage/irmin).
+A set of tutorials for getting started with [irmin](https://github.com/mirage/irmin). The current version is available at [https://zshipko.github.io/irmin-tutorial](https://zshipko.github.io/irmin-tutorial)
 
 ## Dependencies
 
