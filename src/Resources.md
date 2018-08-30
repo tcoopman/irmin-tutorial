@@ -1,5 +1,10 @@
 # Resources
 
+## Documentation
+
+- [Official documentation](ihttps://mirage.github.io/irmin/)
+- [Easy distributed analytics with Irmin 1.0](https://mirage.io/blog/irmin-1.0)
+
 ## Related projects
 
 ### Servers
@@ -20,6 +25,6 @@
 
 ## Users of Irmin
 
-- [tezos](https://gitlab.com/tezos/tezos)
+- [tezos](https://tezos.com)
 - [datakit](https://github.com/moby/datakit)
 - [µDNS](https://github.com/roburio/udns)
