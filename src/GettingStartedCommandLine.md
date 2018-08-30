@@ -2,7 +2,7 @@
 
 ## Installation
 
-These examples require the `irmin-unix` package to be installed from [opam](https://github.com/ocaml/opam):
+These examples requires the `irmin-unix` package to be installed from [opam](https://github.com/ocaml/opam):
 
 ```shell
 $ opam install irmin-unix
@@ -35,7 +35,7 @@ $ irmin remove "My key" --root $EXAMPLE
 
 ## Configuration
 
-If you get sick of passing around `--root` all the time you can create a configuration file called `./irmin.yml` or `~/.irmin/config.yml` with options like:
+If you get sick of passing around `--root` all the time you can create a configuration file called `./irmin.yml` or `~/.irmin/config.yml` with global configuration options:
 
 ```yaml
 root: /tmp/irmin/example
@@ -49,7 +49,7 @@ See the output of `irmin help irmin.yml` for a list of configurable parameters.
 
 `irmin` and `git` can be used interchangeably for certain commands, for instance here are some examples of operations that can be achieved using either git or Irmin.
 
-### Cloning a repository
+### Cloning a remote repository
 
 ```shell
 $ irmin clone $GIT_REPO_URL
@@ -67,6 +67,16 @@ $ irmin revert $COMMIT_HASH
 
 ```shell
 $ git reset --hard $COMMIT_HASH
+```
+
+### Pushing to a remote repository
+
+```shell
+$ irmin push $GIT_REPO_URL
+```
+
+```shell
+$ git push $GIT_REPO_URL master
 ```
 
 As you can see, the command-line application has many capabilities, but it's just a fraction of what's available when using Irmin from OCaml! For more information about using Irmin and OCaml, check out the [next section](GettingStartedOCaml.html).
