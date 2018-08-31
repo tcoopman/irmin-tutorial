@@ -4,8 +4,6 @@ At some point working with `Irmin` you will probably want to move beyond using t
 
 This section will explain how custom datatypes can be implemented using [Irmin.Type](https://mirage.github.io/irmin/irmin/Irmin/Type/index.html). Before continuing with these examples make sure to read through the [official documentation](https://docs.mirage.io/irmin/Irmin/Type/index.html), which has information about the predefined types and how they're used.
 
-...
-
 Now that you've read through the documentation, let's create some contents by defining the functions required by the [Irmin.Contents.S](https://docs.mirage.io/irmin/Irmin/Contents/module-type-S/index.html) interface. This section will walk you through a few different examples:
 
 - [Counter](#counter)
@@ -90,7 +88,7 @@ type color =
     | Black
     | White
     | Other of string
-and car = {
+type car = {
     license: string;
     year: int32;
     make_and_model: string * string;
@@ -152,7 +150,7 @@ And the merge operation:
 end
 ```
 
-Now some examples using `Car` -- we will map VIN numbers to cars, this could be used by a tow company or an auto shop to identify cars:
+Now some examples using `Car` -- we will map Vehicle Identification Number to a car record, this could be used by a tow company or an auto shop to identify cars:
 
 ```ocaml
 module Car_store = Irmin_mem.KV(Car)
@@ -173,8 +171,8 @@ let car_b = {
     owner = "Mike Jones";
 }
 
-let add_car store vin car =
-    Car_store.set store [vin] car
+let add_car store car_number car =
+    Car_store.set store [car_number] car
 
 let main =
     let config = Irmin_mem.config () in

@@ -209,18 +209,39 @@ The `list` implementation will get a list of keys from Redis using the `KEYS` co
       W.notify w key None
 ```
 
-`test_and_set` will modify a key if the current value is equal to `test`. This doesn't require any new Redis commands, we can simply depend on the functions that are already implemented:
+`test_and_set` will modify a key if the current value is equal to `test`. This requires an atomic check and set, which can be done using `WATCH`, `MULTI` and `EXEC` in Redis:
 
 ```ocaml
   let test_and_set t key ~test ~set:s =
+    (* A helper function to execute a command in a Redis transaction *)
+    let txn client args =
+      ignore @@ Client.run client [| "MULTI" |];
+      ignore @@ Client.run client args;
+      Client.run client [| "EXEC" |] <> Nil
+    in
+    let prefix, client = t.t in
+    let key' = Fmt.to_to_string K.pp key in
+    ignore @@ Client.run client [| "WATCH"; prefix ^ key' |];
     find t key >>= fun v ->
     if Irmin.Type.(equal (option V.t)) test v then (
       (match s with
-        | None -> remove t key
-        | Some v -> set t key v
-      ) >>= fun () ->
-      Lwt.return_true
+        | None ->
+            if txn client [| "DEL"; prefix ^ key' |] then
+              W.notify t.w key None >>= fun () ->
+              Lwt.return_true
+            else
+              Lwt.return_false
+        | Some v ->
+            let v' = Fmt.to_to_string V.pp v in
+            if txn client [| "SET"; prefix ^ key'; v' |] then
+              W.notify t.w key None >>= fun () ->
+              Lwt.return_true
+            else
+              Lwt.return_false
+      ) >>= fun ok ->
+      Lwt.return ok
     ) else (
+      ignore @@ Client.run client [| "UNWATCH"; prefix ^ key' |];
       Lwt.return_false
     )
 end
