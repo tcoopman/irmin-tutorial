@@ -234,7 +234,7 @@ The `list` implementation will get a list of keys from Redis using the `KEYS` co
         | Some v ->
             let v' = Fmt.to_to_string V.pp v in
             if txn client [| "SET"; prefix ^ key'; v' |] then
-              W.notify t.w key None >>= fun () ->
+              W.notify t.w key (Some v) >>= fun () ->
               Lwt.return_true
             else
               Lwt.return_false
